@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  password     String
+  pic          String    @default("https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg")
+  isAdmin      Boolean   @default(false)
+  chats        Chat[]    @relation("ChatUsers")
+  messages     Message[] @relation("UserMessages") // Sent messages relation
+  groupChats   Chat[]    @relation("GroupAdmin")
+  readMessages Message[] @relation("ReadBy") // Messages read by the user
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Chat {
+  id              Int       @id @default(autoincrement())
+  chatName        String?   @db.VarChar(255)
+  isGroupChat     Boolean   @default(false)
+  users           User[]    @relation("ChatUsers")
+  latestMessage   Message?  @relation("LatestChatMessage", fields: [latestMessageId], references: [id]) // Explicit relation for the latest message
+  latestMessageId Int?
+  groupAdmin      User?     @relation("GroupAdmin", fields: [groupAdminId], references: [id])
+  groupAdminId    Int?
+  messages        Message[] @relation("ChatMessages") // Explicit relation for chat messages
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  sender    User     @relation("UserMessages", fields: [senderId], references: [id]) // Explicit relation for the message sender
+  senderId  Int
+  content   String   @db.VarChar(255)
+  chat      Chat     @relation("ChatMessages", fields: [chatId], references: [id]) // Explicit relation for messages in a chat
+  chatId    Int
+  readBy    User[]   @relation("ReadBy") // Explicit relation for users who read the message
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Chat      Chat[]   @relation("LatestChatMessage")
+}
